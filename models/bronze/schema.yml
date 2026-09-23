@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: stg_customers
+    description: "Staging model for customers data from Neon Postgres."
+    columns:
+      - name: customer_id
+        description: "Primary key for customers."
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_contracts
+    description: "Staging model for customer contracts."
+    columns:
+      - name: contract_id
+        description: "Primary key for contracts."
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_transactions
+    description: "Staging model for customer payment transactions."
+    columns:
+      - name: transaction_id
+        description: "Primary key for transactions."
+        tests:
+          - unique
+          - not_null

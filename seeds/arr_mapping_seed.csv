@@ -1,0 +1,11 @@
+contract_type,contract_type_key,billing_frequency,is_recurring,arr_tag,arr_multiplier,notes
+Annual,annual,Annual,true,RECURRING,1,Annual subscription revenue
+Annual Contract,annual contract,Annual,true,RECURRING,1,Annual contracted revenue
+Monthly,monthly,Monthly,true,RECURRING,12,Monthly recurring revenue
+Monthly Subscription,monthly subscription,Monthly,true,RECURRING,12,Standard recurring subscription
+Quarterly,quarterly,Quarterly,true,RECURRING,4,Quarterly recurring revenue
+Quarterly Subscription,quarterly subscription,Quarterly,true,RECURRING,4,Quarterly subscription revenue
+Enterprise,enterprise,Annual,true,RECURRING,1,Enterprise annual billing
+Support,support,Monthly,true,RECURRING,12,Support plan revenue
+One-Time,one-time,OneTime,false,NON_RECURRING,0,Non recurring one-time sale
+Trial,trial,Monthly,false,EXCLUDED,0,Trial or no-charge onboarding

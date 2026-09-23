@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: dim_customers
+    description: "Enriched customer dimension table."
+    columns:
+      - name: customer_id
+        description: "Primary key for dim_customers."
+        tests:
+          - unique
+          - not_null
+
+  - name: fct_transactions
+    description: "Fact table containing all enriched financial transactions."
+    columns:
+      - name: transaction_id
+        description: "Primary key for transactions."
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        tests:
+          - not_null
+      - name: amount
+        tests:
+          - not_null

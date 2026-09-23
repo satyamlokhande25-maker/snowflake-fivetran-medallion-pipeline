@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: monthly_revenue_summary
+    description: "Monthly aggregation of revenue and payment status by contract type."
+    columns:
+      - name: transaction_month
+        tests:
+          - not_null
+      - name: total_successful_revenue
+        tests:
+          - not_null
+
+  - name: customer_lifetime_value
+    description: "Customer lifetime value and metrics for analytics."
+    columns:
+      - name: customer_id
+        description: "Primary key for customer LTV."
+        tests:
+          - unique
+          - not_null
+      - name: lifetime_revenue
+        tests:
+          - not_null

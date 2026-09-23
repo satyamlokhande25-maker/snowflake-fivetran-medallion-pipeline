@@ -1,0 +1,23 @@
+version: 2
+
+sources:
+  - name: ecommerce
+    description: "Raw data synced into Snowflake via Fivetran."
+
+    database: SATYAM
+    schema: public
+
+    # Ye block zaroori hai taaki lowercase tables read ho sakein
+    quoting:
+      schema: true
+      identifier: true
+
+    tables:
+      - name: customers
+        description: "Raw customer master data."
+
+      - name: contracts
+        description: "Raw contract data."
+
+      - name: transactions
+        description: "Raw payment transactions data."
