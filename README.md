@@ -1,211 +1,217 @@
-# snowflake-fivetran-medallion-pipeline
+<div align="center">
 
-A production-style dbt project built to model e-commerce/contract data using a medallion architecture on Snowflake. The pipeline ingests raw customer, contract, and transaction data, standardizes it through bronze and silver layers, and exposes business-ready analytics in the gold layer.
+# 🏔️ Enterprise Medallion ELT Data Pipeline
 
-## Overview
+### dbt Core · Snowflake · Fivetran · Neon PostgreSQL
 
-This project is designed to transform raw operational data into analytical tables for:
+[![dbt](https://img.shields.io/badge/dbt--core-1.12.x-FF694B?logo=dbt&logoColor=white)](https://www.getdbt.com/)
+[![Snowflake](https://img.shields.io/badge/Warehouse-Snowflake-29B5E8?logo=snowflake&logoColor=white)](https://www.snowflake.com/)
+[![Fivetran](https://img.shields.io/badge/Ingestion-Fivetran-blue)](https://www.fivetran.com/)
+[![Postgres](https://img.shields.io/badge/Source-Neon%20PostgreSQL-336791?logo=postgresql&logoColor=white)](https://neon.tech/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-- customer-level reporting
-- transactional fact analysis
-- contract health monitoring
-- monthly revenue summaries
-- ARR (Annual Recurring Revenue) estimation
-- historical tracking using dbt snapshots
+An end-to-end modern data stack ELT pipeline implementing the **Medallion Architecture** — **Bronze (Staging)**, **Silver (Intermediate / Normalized)**, and **Gold (Marts / Analytics)** — built on **Neon PostgreSQL**, **Fivetran**, **Snowflake**, and **dbt Core**.
 
-The architecture follows the classic medallion pattern:
+</div>
 
-- Bronze: raw staging and standardization
-- Silver: clean dimension and fact tables
-- Gold: business aggregates and KPIs
+---
 
-## Architecture
+## 📑 Table of Contents
 
-```mermaid
-flowchart LR
-    A[Source: Snowflake Raw Tables] --> B[Bronze Layer]
-    B --> C[Silver Layer]
-    C --> D[Gold Layer]
-    D --> E[Dashboards / BI]
+- [Architecture Overview](#architecture-overview)
+- [Medallion Data Flow](#medallion-data-flow)
+- [Tech Stack & Tooling](#tech-stack--tooling)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [Testing & Data Integrity](#testing--data-integrity)
+- [License](#license)
 
-    B --> F[dbt Tests]
-    B --> G[dbt Snapshots]
-    C --> H[Business Logic]
-    D --> I[ARR / Revenue Metrics]
+---
+
+## Architecture Overview
+
+```text
+[ Neon PostgreSQL ]
+        │
+        ▼ (Automated CDC / ELT Ingestion via Fivetran)
+[ Snowflake: SATYAM."public" ] (Raw Ingested Layer)
+        │
+        ▼ (Bronze Layer: dbt Views, Identifiers quoting & Soft-Delete Filtering)
+  ├── stg_customers
+  ├── stg_contracts
+  └── stg_transactions
+        │
+        ▼ (Silver Layer: Persistent Tables, Clean Dimensions & Facts)
+  ├── dim_customers     (Customer Profiles & Active Contract Metrics)
+  └── fct_transactions  (Enriched Transactions with Contract Attribution)
+        │
+        ▼ (Gold Layer: Business Aggregation Marts for BI & Executive Dashboards)
+  ├── monthly_revenue_summary (Collection Performance & Success / Failure Rates)
+  └── customer_lifetime_value (Customer Spend & Historical Retention KPIs)
 ```
 
-## Layers
+---
 
-### Bronze
+## Medallion Data Flow
 
-Raw source tables are standardized and exposed as staging models:
+### 🥉 1. Bronze Layer (Staging)
 
-- `stg_customers`
-- `stg_contracts`
-- `stg_transactions`
+- **Ingestion Source:** Raw tables ingested from Neon PostgreSQL via Fivetran into Snowflake schema `SATYAM."public"`.
+- **Case-Sensitivity Handling:** Handled PostgreSQL-to-Snowflake lowercase naming collision using explicit quoting parameters in `sources.yml`.
+- **Soft-Deletion Enforcement:** Integrated Fivetran metadata filtering using `coalesce(_fivetran_deleted, false) = false` to guarantee downstream models only receive active records.
 
-These models clean the raw field names and remove deleted records from Fivetran-synced data.
+**Models:**
+- `stg_customers`: Standardized customer base view.
+- `stg_contracts`: Standardized contract status view.
+- `stg_transactions`: Cleaned base financial transactions.
 
-### Silver
+### 🥈 2. Silver Layer (Intermediate / Normalized)
 
-Curated business entities are modeled here:
+- **Design Pattern:** Modeled as Kimball-style Dimensions and Facts materialized as persistent Snowflake tables.
 
-- `dim_customers`
-- `fct_transactions`
+**Models:**
+- `dim_customers`: Left joins customer staging with contract aggregations to calculate `total_contracts` and `active_contracts` per entity.
+- `fct_transactions`: Fact table joining transaction events with contractual terms to expose `contract_type`, transaction day, and payment statuses.
 
-This layer creates customer dimensions and transaction facts with normalized relationships.
+### 🥇 3. Gold Layer (Business Marts)
 
-### Gold
+- **Design Pattern:** Highly indexed and aggregated presentation layer optimized for direct dashboard consumption (Tableau, Power BI, Metabase).
 
-Business-ready metrics are built here:
+**Models:**
+- `monthly_revenue_summary`: Monthly granular breakdown of transaction volumes, total successful collections, and total failed revenue by contract type and payment channel.
+- `customer_lifetime_value`: Analytical mart tracking customer-level lifetime revenue (LTV), transaction frequency, first acquisition date, and recent transaction timestamps.
 
-- `monthly_revenue_summary`
-- `customer_lifetime_value`
-- `arr_revenue`
-- `customer_arr`
+---
 
-These tables are designed for reporting, KPI dashboards, and executive summaries.
+---
 
-## Business Rules Implemented
+## Tech Stack & Tooling
 
-The project includes business validation logic for:
+| Component | Tool |
+|---|---|
+| Source Database | Neon PostgreSQL |
+| Ingestion Engine | Fivetran (Automated schema sync & CDC) |
+| Cloud Data Warehouse | Snowflake (Role: `SYSADMIN`, Warehouse: `COMPUTE_WH`) |
+| Transformation Framework | dbt Core (Snowflake Adapter 1.12.x) |
+| Data Quality & Testing | Schema constraints (`unique`, `not_null`) across all pipeline layers |
 
-- unique keys and not-null constraints
-- valid contract date ranges
-- positive transaction values
-- valid contract/customer references
-- consistent contract counts per customer
-- non-negative revenue totals
-- ARR mapping by billing frequency and contract type
+---
 
-## Data Sources
-
-The project reads from the ecommerce source in Snowflake:
-
-- `SATYAM.PUBLIC.customers`
-- `SATYAM.PUBLIC.contracts`
-- `SATYAM.PUBLIC.transactions`
-
-These are mapped through the `source.yml` configuration and used by the staging models.
-
-## Snapshot Strategy
-
-Historical changes are tracked for key source tables using dbt snapshots:
-
-- `contracts_snapshot`
-- `transactions_snapshot`
-
-This enables tracking changes over time without reprocessing the entire raw dataset.
-
-## Seed Mapping for ARR
-
-ARR logic is driven by a seed mapping table:
-
-- `seeds/arr_mapping_seed.csv`
-
-This mapping converts raw contract types into business tags and annualization multipliers such as:
-
-- Monthly → 12
-- Quarterly → 4
-- Annual → 1
-- One-time → 0
-
-This ensures recurring revenue can be annualized in a consistent, repeatable way.
+---
 
 ## Project Structure
 
 ```text
-.
+satyam_medallion_pipeline/
 ├── dbt_project.yml
-├── README.md
-├── analyses/
-├── macros/
+├── profiles.yml                 # Local connection profile (Kept private)
 ├── models/
 │   ├── bronze/
+│   │   ├── sources.yml          # Raw table definitions with identifier quoting
+│   │   ├── schema.yml           # Bronze layer schema assertions & data tests
+│   │   ├── stg_customers.sql
+│   │   ├── stg_contracts.sql
+│   │   └── stg_transactions.sql
 │   ├── silver/
+│   │   ├── schema.yml           # Silver layer primary key & null testing
+│   │   ├── dim_customers.sql
+│   │   └── fct_transactions.sql
 │   └── gold/
-├── seeds/
-│   └── arr_mapping_seed.csv
-├── snapshots/
-│   ├── contracts_snapshot.sql
-│   └── transactions_snapshot.sql
-├── tests/
-│   ├── fct_transactions_amount_positive.sql
-│   ├── stg_contracts_valid_date_ranges.sql
-│   ├── fct_transactions_valid_references.sql
-│   ├── dim_customers_contract_counts_consistent.sql
-│   └── monthly_revenue_summary_non_negative.sql
-└── target/
+│       ├── schema.yml           # Gold layer KPI validation tests
+│       ├── monthly_revenue_summary.sql
+│       └── customer_lifetime_value.sql
+└── README.md
 ```
 
-## Tech Stack
+---
 
-- dbt Core
-- Snowflake
-- SQL
-- GitHub
-- dbt Snapshots
-- dbt Seeds
-- dbt Tests
+---
 
-## Setup
+## Getting Started
 
-1. Clone the repository
-2. Configure your dbt profile for Snowflake
-3. Install dbt dependencies if needed
-4. Run the project
+### Prerequisites
 
-### Commands
+- Python 3.10+ installed
+- Snowflake account with `SYSADMIN` or assigned project role
+- Fivetran connector configured from Neon PostgreSQL to Snowflake
+
+### Setup & Execution
+
+**1. Clone the repository:**
 
 ```bash
-dbt seed
-dbt run
-dbt test
-dbt snapshot
+git clone https://github.com/satyamlokhande25-maker/snowflake-fivetran-medallion-pipeline.git
+cd snowflake-fivetran-medallion-pipeline
 ```
 
-## Typical Workflow
+**2. Configure local `profiles.yml` (`~/.dbt/profiles.yml`):**
+
+```yaml
+satyam_medallion_pipeline:
+  outputs:
+    dev:
+      type: snowflake
+      account: <YOUR_SNOWFLAKE_ACCOUNT>
+      user: <YOUR_USERNAME>
+      password: '<YOUR_PASSWORD>'
+      role: SYSADMIN
+      database: SATYAM
+      warehouse: COMPUTE_WH
+      schema: DBT_DEV
+      threads: 4
+  target: dev
+```
+
+**3. Validate pipeline connectivity:**
 
 ```bash
-dbt seed
+dbt debug
+```
+
+**4. Build and execute all layers:**
+
+```bash
+# Build all models across Bronze, Silver, and Gold
 dbt run
+
+# Execute schema validations and referential integrity tests
 dbt test
+```
+
+**5. Generate documentation and lineage DAG:**
+
+```bash
 dbt docs generate
 dbt docs serve
 ```
 
-## Quality & Governance
+---
 
-This project follows analytical engineering best practices:
+---
 
-- layered transformations with clear ownership
-- data quality tests for critical business logic
-- reference integrity checks
-- snapshotting for change tracking
-- consistent KPI definitions
+## Testing & Data Integrity
 
-## Key Metrics Delivered
+Data assertions are configured at each layer within the respective `schema.yml` manifests:
 
-- Monthly revenue performance
-- Successful vs failed transaction trends
-- Customer contract counts
-- Customer lifetime value
-- ARR by customer and contract type
+- ✅ **Unique & Not Null Tests:** Applied across primary keys (`customer_id`, `contract_id`, `transaction_id`) to prevent fan-out anomalies.
+- ✅ **Referential & Metric Consistency:** Validating revenue aggregations and transaction mappings across transformations.
 
-## Status
+---
 
-The project is currently configured and validated for:
+## 🤝 Contributing
 
-- model execution
-- seed loading
-- snapshot creation
-- data quality checks
-- ARR calculation logic
+Contributions, issues, and feature requests are welcome. Feel free to check the [issues page](../../issues) or open a pull request.
 
-## License
+---
 
-This project is for internal analytics and business intelligence use. Please check your organization’s licensing and data governance policies before publishing or sharing externally.
+## 📄 License
 
-## Author
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
-Satyam Analytics Engineering
+---
+
+<div align="center">
+
+Built with ❤️ using dbt, Snowflake & Fivetran
+
+</div>
