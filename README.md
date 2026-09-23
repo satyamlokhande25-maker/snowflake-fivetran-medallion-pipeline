@@ -1,4 +1,4 @@
-# Satyam Medallion Pipeline
+# snowflake-fivetran-medallion-pipeline
 
 A production-style dbt project built to model e-commerce/contract data using a medallion architecture on Snowflake. The pipeline ingests raw customer, contract, and transaction data, standardizes it through bronze and silver layers, and exposes business-ready analytics in the gold layer.
 
